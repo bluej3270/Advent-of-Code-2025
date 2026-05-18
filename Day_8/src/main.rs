@@ -1,7 +1,8 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap};
 use std::fs;
 use disjoint::DisjointSetVec;
 
+#[derive(Clone)]
 struct Point {
     x: u64,
     y: u64,
@@ -38,26 +39,26 @@ fn main() {
         }
     }
 
-    // Create sets by merging the closest points (1000 times)
+    // Create sets by merging the closest points until they are all in one set
     // The DisjointSetVec allows us to efficiently merge sets and find which set a point belongs to
-    let mut circuts: DisjointSetVec<Point> = DisjointSetVec::from(points);
-    for (_, (i, j)) in distances.iter().take(1000) {
-        circuts.join(*i, *j);
+    let mut circuts: DisjointSetVec<Point> = DisjointSetVec::from(points.clone()); // We have to preserve points so we can go back later and find the x value of the last points merged
+    let mut num_sets = points.len();
+    for (_, (p1, p2)) in distances.iter() {
+        if circuts.join(*p1, *p2) {
+            num_sets -= 1;
+        }
+
+        // If the number of sets is 1, stop merging
+        if num_sets == 1 {
+            // Multiply the x coordinates of the last two sets joined
+            let x1 = points[*p1].x;
+            let x2 = points[*p2].x;
+
+            println!("{}", x1 * x2);
+
+            break;
+        }
     }
-
-    // Calculate the sizes of every set / circuit
-    // All entries in one set will have the same set root, so we will use that to identify each set
-    let mut sizes: HashMap<usize, u64> = HashMap::new();
-    for i in 0..circuts.len() {
-        *sizes.entry(circuts.root_of(i)).or_insert(0) += 1;
-    }
-
-    // Multiply the sizes of the 3 largest sets together
-    let mut size_values: Vec<u64> = sizes.values().copied().collect();
-    size_values.sort_by(|a, b| b.cmp(a)); // Sort in descending order
-
-    let product: u64 = size_values.iter().take(3).product();
-    println!("Product: {}", product);
 }
 
 // Calculates the Euclidean distance between two 3d points
